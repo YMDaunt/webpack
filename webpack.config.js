@@ -1,16 +1,34 @@
 'use strict'
+
 const path = require('path')
+const glob = require('glob')
 const webpack = require('webpack')
 const HtmlWebpackPlugin = require('html-webpack-plugin')
 const ExtractTextPlugin = require('extract-text-webpack-plugin')
 const { CleanWebpackPlugin } = require("clean-webpack-plugin")
 
+// 多入口自动遍历
+var srcDir = path.resolve(process.cwd(), 'src')
+var entries = function () {
+    var jsDir = path.resolve(srcDir, 'js')
+    var entryFiles = glob.sync(jsDir + '/*.{js,jsx}')
+    var map = {};
+
+    for (var i = 0; i < entryFiles.length; i++) {
+        var filePath = entryFiles[i];
+        var filename = filePath.substring(filePath.lastIndexOf('\/') + 1, filePath.lastIndexOf('.'));
+        map[filename] = filePath;
+    }
+    return map;
+}
+
 module.exports = {
     mode: 'development',
-    entry: {
-        common: './src/js/common/common.js',
-        index: './src/js/index.js'
-    },
+    entry: entries(), //多页面入口
+    // entry: {
+    //     common: './src/js/common/common.js',
+    //     index: './src/js/index.js'
+    // },
     output: {
         path: path.resolve(__dirname, './dist'),
         publicPath: '/dist/',
