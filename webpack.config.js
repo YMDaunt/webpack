@@ -4,16 +4,17 @@ const path = require('path')
 const glob = require('glob')
 const webpack = require('webpack')
 const HtmlWebpackPlugin = require('html-webpack-plugin')
-const ExtractTextPlugin = require('extract-text-webpack-plugin')
+const MiniCssExtractPlugin = require('min-css-extrac-plugin')
 const { CleanWebpackPlugin } = require("clean-webpack-plugin")
+// const CommonsChunkPlugin = webpack.optimize.CommonsChunkPlugin  webpack3才需要 webpack4直接用optimization
 
-// 多入口自动遍历
+
+// 多入口自动遍历 生成map数组
 var srcDir = path.resolve(process.cwd(), 'src')
 var entries = function () {
     var jsDir = path.resolve(srcDir, 'js')
     var entryFiles = glob.sync(jsDir + '/*.{js,jsx}')
     var map = {};
-
     for (var i = 0; i < entryFiles.length; i++) {
         var filePath = entryFiles[i];
         var filename = filePath.substring(filePath.lastIndexOf('\/') + 1, filePath.lastIndexOf('.'));
@@ -39,6 +40,7 @@ module.exports = {
             'vue$': 'vue/dist/vue.esm.js' //内部为正则表达式  vue结尾的
         }
     },
+    devtool: "inline-source-map",  // 生成sourceMap
     module: {
         rules: [
             {
@@ -78,7 +80,41 @@ module.exports = {
             template:'html/index.html',
             filename: 'html/index.html'
         }),
-        new ExtractTextPlugin("static/css/[name].[chunkhash:8].css"),
-        new CleanWebpackPlugin()
-    ]
+        new MiniCssExtractPlugin("static/css/[name].[chunkhash:8].css"),  //css单独打包， hash文件后缀8位数
+        new CleanWebpackPlugin(),  // 构建前先清除dist文件夹
+    ],
+
+    // 提取公共js文件
+    optimization: {
+        splitChunks: {
+            cacheGroups: {
+                commons: {
+                    name: "common",
+                    chunks: "initial",
+                    minChunks: 2
+                }
+            }
+        }
+    },
 }
+
+// 遍历多出口plugins
+var htmlEntryDir = path.resolve(process.cwd(), 'html')
+var htmlPlugins = function () {
+    var outPutFiles = glob.sync(htmlEntryDir + '/*.html')
+    var map = {};
+    for (var i = 0; i < outPutFiles.length; i++) {
+        var filePath = outPutFiles[i];
+        var filename = filePath.substring(filePath.lastIndexOf('\/') + 1, filePath.lastIndexOf('.'))
+        map[filename] = filename
+        console.log(7, map)
+        module.exports.plugins.push(
+            new HtmlWebpackPlugin({
+                template: 'html/' + filename + '.html',
+                filename: 'html/' + filename + '.html'
+            })
+        )
+    }
+    return map;
+} 
+htmlPlugins()
